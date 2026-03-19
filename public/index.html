@@ -142,6 +142,8 @@ input:focus{border-color:var(--blue);}
 .end-btn:hover{transform:translateY(-2px);}
 
 @media(max-width:768px){.gbody{grid-template-columns:1fr;}.timer-wrap{justify-content:center;}}
+.author{position:fixed;bottom:10px;left:14px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1px;z-index:50;}
+.author span{color:rgba(58,172,222,0.5);}
 </style>
 </head>
 <body>
@@ -231,6 +233,8 @@ input:focus{border-color:var(--blue);}
   </div>
   <button class="end-btn" onclick="location.reload()">🔄 JUGAR DE NUEVO</button>
 </div>
+
+<div class="author">Hecho por <span>Carlos Amortegui (MCM)</span></div>
 
 <script>
 const socket = io();
