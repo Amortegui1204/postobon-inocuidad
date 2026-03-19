@@ -178,7 +178,7 @@ input:focus{border-color:var(--blue);}
       </div>
       <div class="timer-box">
         <div class="timer-label">Tiempo</div>
-        <div class="timer-val" id="timer-display">5:00</div>
+        <div class="timer-val" id="timer-display">4:00</div>
       </div>
     </div>
   </div>
@@ -238,7 +238,7 @@ const socket = io();
 // ── STATE ──
 let pos = 0, score = 0, lives = 3;
 let timerInterval = null;
-let secondsLeft = 300; // 5 min
+let secondsLeft = 240; // 5 min
 let cells = [], token = null;
 let myName = '';
 let gameActive = false;
@@ -274,7 +274,7 @@ function buildBoard() {
     cell.id = 'c'+n;
     if (SNAKES[n])  cell.classList.add('snake-head');
     if (LADDERS[n]) cell.classList.add('ladder-start');
-    if (QSQUARES.has(n)&&!SNAKES[n]&&!LADDERS[n]) cell.classList.add('challenge');
+    if (!SNAKES[n]if (QSQUARES.has(n)&&!SNAKES[n]&&!LADDERS[n]) cell.classList.addif (QSQUARES.has(n)&&!SNAKES[n]&&!LADDERS[n]) cell.classList.add!LADDERS[n]if (QSQUARES.has(n)&&!SNAKES[n]&&!LADDERS[n]) cell.classList.addif (QSQUARES.has(n)&&!SNAKES[n]&&!LADDERS[n]) cell.classList.addn<64) cell.classList.add('challenge');
     const icon = SNAKES[n]?'🐍':LADDERS[n]?'🪜':QSQUARES.has(n)?'❓':'';
     cell.innerHTML = `<span class="cell-num">${n}</span>${icon?`<span class="cell-icon">${icon}</span>`:''}`;
     board.appendChild(cell);
@@ -449,7 +449,7 @@ socket.on('soloStarted', ({name}) => {
   pos = 0;
   gameActive = true;
   startTimer();
-  addLog(`🎮 ¡Hola ${name}! Tienes 5 minutos. ¡Suerte!`,'info');
+  addLog(`🎮 ¡Hola ${name}! Tienes 4 minutos. ¡Suerte!`,'info');
 });
 
 socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l}) => {
