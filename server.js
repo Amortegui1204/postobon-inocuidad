@@ -99,8 +99,8 @@ const QUESTIONS = [
   { q:"¿Cómo debe estar el acceso al almacén de materias primas?", opts:["Abierto para todos","Restringido","Solo para supervisores","Sin restricciones en el día"], ans:1, pts:90, tema:"Zonas" },
 ];
 
-const SNAKES  = {60:44,41:25,28:10,54:36};
-const LADDERS = {4:14,9:31,20:38,40:59,51:67,63:81};
+const SNAKES  = {60:44,41:25,28:10,54:36,47:19,35:6};
+const LADDERS = {4:14,9:31,20:38,40:59,51:67,63:81,15:44,33:56};
 // ALL squares that are not snakes or ladders get questions
 const SNAKE_SET  = new Set(Object.keys(SNAKES).map(Number));
 const LADDER_SET = new Set(Object.keys(LADDERS).map(Number));
