@@ -370,6 +370,7 @@ function buildBoard() {
     } else {
       cell.innerHTML = `<span class="cell-num">${n}</span>${icon?`<span class="cell-icon">${icon}</span>`:''}`;
     }
+    board.appendChild(cell);
     cells[n] = cell;
   });
   // Token
