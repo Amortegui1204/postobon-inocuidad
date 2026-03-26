@@ -71,7 +71,9 @@ input:focus{border-color:var(--blue);}
 .cell{background:rgba(255,255,255,0.06);border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid rgba(255,255,255,0.05);font-size:clamp(7px,1vw,11px);font-weight:800;position:relative;}
 .cell.challenge{background:rgba(10,126,194,0.25);border-color:var(--blue);}
 .cell.snake-head{background:rgba(220,50,50,0.25);border-color:var(--red);}
+.cell.snake-tail{background:rgba(220,50,50,0.12);border-color:rgba(220,50,50,0.4);}
 .cell.ladder-start{background:rgba(46,204,113,0.2);border-color:var(--green);}
+.cell.ladder-end{background:rgba(46,204,113,0.1);border-color:rgba(46,204,113,0.35);}
 .cell-num{opacity:.5;font-size:clamp(6px,0.8vw,9px);}
 .cell-icon{font-size:clamp(8px,1.1vw,14px);}
 .token{position:absolute;border-radius:50%;border:2px solid #fff;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:clamp(5px,0.8vw,9px);font-weight:900;color:#fff;transition:all .5s cubic-bezier(.34,1.56,.64,1);width:clamp(12px,1.8vw,20px);height:clamp(12px,1.8vw,20px);background:var(--blue);}
@@ -271,8 +273,10 @@ input:focus{border-color:var(--blue);}
       <div id="board"></div>
       <div class="legend">
         <div class="leg"><div class="leg-dot" style="background:rgba(10,126,194,0.5)"></div>Pregunta ❓</div>
-        <div class="leg"><div class="leg-dot" style="background:rgba(232,39,42,0.5)"></div>Serpiente 🐍</div>
-        <div class="leg"><div class="leg-dot" style="background:rgba(46,204,113,0.3)"></div>Escalera 🪜</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(220,50,50,0.5)"></div>Cabeza serpiente 🐍</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(220,50,50,0.2)"></div>Cola serpiente 🔻</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(46,204,113,0.4)"></div>Pie escalera 🪜</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(46,204,113,0.15)"></div>Tope escalera 🔝</div>
       </div>
     </div>
     <div class="side">
@@ -359,8 +363,19 @@ function buildBoard() {
     cell.id = 'c'+n;
     if (SNAKES[n])  cell.classList.add('snake-head');
     if (LADDERS[n]) cell.classList.add('ladder-start');
-    if (!SNAKES[n] && !LADDERS[n] && n<64 && n>1) cell.classList.add('challenge');
-    const icon = SNAKES[n]?'🐍':LADDERS[n]?'🪜':'❓';
+    // Mark destinations too
+    const snakeTails = Object.values(SNAKES);
+    const ladderEnds = Object.values(LADDERS);
+    if (snakeTails.includes(n) && !SNAKES[n]) cell.classList.add('snake-tail');
+    if (ladderEnds.includes(n) && !LADDERS[n]) cell.classList.add('ladder-end');
+    if (!SNAKES[n] && !LADDERS[n] && !snakeTails.includes(n) && !ladderEnds.includes(n) && n<64 && n>1) cell.classList.add('challenge');
+    const snakeTails = Object.values(SNAKES);
+    const ladderEnds = Object.values(LADDERS);
+    const isSnakeHead  = !!SNAKES[n];
+    const isLadderFoot = !!LADDERS[n];
+    const isSnakeTail  = snakeTails.includes(n) && !isSnakeHead;
+    const isLadderTop  = ladderEnds.includes(n) && !isLadderFoot;
+    const icon = isSnakeHead ? '🐍' : isLadderFoot ? '🪜' : isSnakeTail ? '🔻❓' : isLadderTop ? '🔝❓' : '❓';
     if (n===1) {
       cell.classList.add('start-cell');
       cell.innerHTML = `<span style="color:#E91E8C;font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏁 INICIO</span>`;
