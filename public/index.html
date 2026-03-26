@@ -363,18 +363,15 @@ function buildBoard() {
     cell.id = 'c'+n;
     if (SNAKES[n])  cell.classList.add('snake-head');
     if (LADDERS[n]) cell.classList.add('ladder-start');
-    // Mark destinations too
-    const snakeTails = Object.values(SNAKES);
-    const ladderEnds = Object.values(LADDERS);
-    if (snakeTails.includes(n) && !SNAKES[n]) cell.classList.add('snake-tail');
-    if (ladderEnds.includes(n) && !LADDERS[n]) cell.classList.add('ladder-end');
-    if (!SNAKES[n] && !LADDERS[n] && !snakeTails.includes(n) && !ladderEnds.includes(n) && n<64 && n>1) cell.classList.add('challenge');
     const snakeTails = Object.values(SNAKES);
     const ladderEnds = Object.values(LADDERS);
     const isSnakeHead  = !!SNAKES[n];
     const isLadderFoot = !!LADDERS[n];
     const isSnakeTail  = snakeTails.includes(n) && !isSnakeHead;
     const isLadderTop  = ladderEnds.includes(n) && !isLadderFoot;
+    if (isSnakeTail) cell.classList.add('snake-tail');
+    if (isLadderTop) cell.classList.add('ladder-end');
+    if (!isSnakeHead && !isLadderFoot && !isSnakeTail && !isLadderTop && n<64 && n>1) cell.classList.add('challenge');
     const icon = isSnakeHead ? '🐍' : isLadderFoot ? '🪜' : isSnakeTail ? '🔻❓' : isLadderTop ? '🔝❓' : '❓';
     if (n===1) {
       cell.classList.add('start-cell');
