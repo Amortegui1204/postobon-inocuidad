@@ -168,8 +168,8 @@ input:focus{border-color:var(--blue);}
 .blocked-msg{font-size:16px;color:rgba(255,255,255,0.7);max-width:400px;line-height:1.7;}
 
 /* START/FINISH labels on board */
-.cell.start-cell{background:rgba(46,204,113,0.25);border-color:var(--green);border-width:2px;}
-.cell.finish-cell{background:rgba(255,204,0,0.25);border-color:var(--yellow);border-width:2px;}
+.cell.start-cell{background:rgba(220,50,150,0.3);border-color:#E91E8C;border-width:2px;}
+.cell.finish-cell{background:rgba(220,50,150,0.3);border-color:#E91E8C;border-width:2px;}
 .cell-tag{font-family:'Bebas Neue';font-size:clamp(7px,1vw,11px);letter-spacing:1px;}
 </style>
 </head>
@@ -238,7 +238,7 @@ input:focus{border-color:var(--blue);}
   <div class="card">
     <h2>🎮 Ingresa tu nombre para jugar</h2>
     <label>Tu Nombre</label>
-    <input type="text" id="inp-name" placeholder="Ej: Carlos Antonio Amortegui" maxlength="40">
+    <input type="text" id="inp-name" placeholder="Escribe tu nombre completo" maxlength="40" autocomplete="off">
     <button class="btn btn-blue" onclick="startSolo()">🚀 INICIAR JUEGO</button>
     <button class="btn btn-board" onclick="showLeaderboard()">🏆 VER TABLA DE PUNTAJES</button>
 
@@ -363,10 +363,10 @@ function buildBoard() {
     const icon = SNAKES[n]?'🐍':LADDERS[n]?'🪜':'❓';
     if (n===1) {
       cell.classList.add('start-cell');
-      cell.innerHTML = `<span style="color:var(--green);font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏁 INICIO</span>`;
+      cell.innerHTML = `<span style="color:#E91E8C;font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏁 INICIO</span>`;
     } else if (n===64) {
       cell.classList.add('finish-cell');
-      cell.innerHTML = `<span style="color:var(--yellow);font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏆 META</span>`;
+      cell.innerHTML = `<span style="color:#E91E8C;font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏆 META</span>`;
     } else {
       cell.innerHTML = `<span class="cell-num">${n}</span>${icon?`<span class="cell-icon">${icon}</span>`:''}`;
     }
@@ -556,7 +556,7 @@ socket.on('soloStarted', ({name}) => {
   addLog(`🎮 ¡Hola ${name}! Tienes 4 minutos. ¡Suerte!`,'info');
 });
 
-socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l}) => {
+socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l, scoreChange}) => {
   document.getElementById('dice').innerHTML = diceSVG(roll);
   addLog(`Sacaste ${roll} → casilla ${newPos}`);
   updateScore(s);
@@ -565,8 +565,13 @@ socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l}) => {
   if (event) {
     setTimeout(()=>{
       placeToken(event.to);
-      if (event.type==='snake') { addLog(`🐍 Serpiente: ${event.from}→${event.to}`,'bad'); showToast(`🐍 Serpiente! Bajas a ${event.to}`,'bad'); }
-      else { addLog(`🪜 Escalera: ${event.from}→${event.to}`,'good'); showToast(`🪜 ¡Escalera! Subes a ${event.to}`,'good'); }
+      if (event.type==='snake') {
+        addLog(`🐍 Serpiente: ${event.from}→${event.to} (-100 pts)`,'bad');
+        showToast(`🐍 ¡Serpiente! Bajas a ${event.to} · -100 pts`,'bad');
+      } else {
+        addLog(`🪜 Escalera: ${event.from}→${event.to} (+50 pts)`,'good');
+        showToast(`🪜 ¡Escalera! Subes a ${event.to} · +50 pts`,'good');
+      }
     },400);
   }
   if (!document.getElementById('overlay').classList.contains('show')) {
