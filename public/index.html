@@ -385,13 +385,11 @@ function placeToken(p) {
   if (!token) return;
   if (p===0) { token.style.display='none'; return; }
   token.style.display = 'flex';
-  const board = document.getElementById('board');
   const cell = cells[p];
   if (!cell) return;
-  const br = board.getBoundingClientRect();
-  const cr = cell.getBoundingClientRect();
-  token.style.left = (cr.left - br.left + 2) + 'px';
-  token.style.top  = (cr.top  - br.top  + 2) + 'px';
+  // Use offsetTop/offsetLeft for more reliable positioning
+  token.style.left = (cell.offsetLeft + 2) + 'px';
+  token.style.top  = (cell.offsetTop  + 2) + 'px';
 }
 
 // ── TIMER ──
@@ -558,11 +556,12 @@ socket.on('soloStarted', ({name}) => {
 
 socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l, scoreChange}) => {
   document.getElementById('dice').innerHTML = diceSVG(roll);
-  addLog(`Sacaste ${roll} → casilla ${newPos}`);
   updateScore(s);
   updateLives(l);
-  placeToken(newPos);
   if (event) {
+    // First show landing square, then after delay move to snake/ladder destination
+    placeToken(event.from);
+    addLog(`Sacaste ${roll} → casilla ${event.from}`);
     setTimeout(()=>{
       placeToken(event.to);
       if (event.type==='snake') {
@@ -572,7 +571,10 @@ socket.on('diceRolled', ({roll, newPos, event, score: s, lives: l, scoreChange})
         addLog(`🪜 Escalera: ${event.from}→${event.to} (+50 pts)`,'good');
         showToast(`🪜 ¡Escalera! Subes a ${event.to} · +50 pts`,'good');
       }
-    },400);
+    },600);
+  } else {
+    addLog(`Sacaste ${roll} → casilla ${newPos}`);
+    placeToken(newPos);
   }
   if (!document.getElementById('overlay').classList.contains('show')) {
     document.getElementById('roll-btn').disabled = false;
