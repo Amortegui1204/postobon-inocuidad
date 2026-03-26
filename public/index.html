@@ -144,9 +144,90 @@ input:focus{border-color:var(--blue);}
 @media(max-width:768px){.gbody{grid-template-columns:1fr;}.timer-wrap{justify-content:center;}}
 .author{position:fixed;bottom:10px;left:14px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1px;z-index:50;}
 .author span{color:rgba(58,172,222,0.5);}
+
+/* INSTRUCTIONS MODAL */
+#instructions-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);}
+.instr-modal{background:linear-gradient(135deg,#020F1A,#062B4A);border:2px solid var(--blue);border-radius:24px;padding:36px;max-width:580px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,0.7);max-height:90vh;overflow-y:auto;}
+.instr-logo{text-align:center;margin-bottom:20px;}
+.instr-logo .logo-circle{margin:0 auto 10px;width:80px;height:80px;font-size:28px;}
+.instr-logo .logo-name{font-size:32px;}
+.instr-title{font-family:'Bebas Neue';font-size:26px;letter-spacing:3px;color:var(--yellow);text-align:center;margin-bottom:20px;}
+.instr-body{font-size:14px;line-height:1.8;color:rgba(255,255,255,0.85);}
+.instr-body h4{font-family:'Bebas Neue';font-size:18px;letter-spacing:2px;color:var(--lblue);margin:16px 0 6px;}
+.instr-body ul{padding-left:18px;}
+.instr-body ul li{margin-bottom:6px;}
+.instr-warning{background:rgba(232,39,42,0.15);border:1px solid rgba(232,39,42,0.4);border-radius:10px;padding:12px 16px;margin-top:16px;font-size:13px;font-weight:800;color:#ff8080;text-align:center;}
+.instr-btn{width:100%;margin-top:24px;padding:16px;border-radius:14px;border:none;cursor:pointer;font-family:'Bebas Neue';font-size:22px;letter-spacing:3px;background:linear-gradient(135deg,var(--blue),var(--lblue));color:#fff;box-shadow:0 6px 20px rgba(10,126,194,0.5);transition:.15s;}
+.instr-btn:hover{transform:translateY(-2px);}
+
+/* BLOCKED SCREEN */
+#blocked-screen{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.95);backdrop-filter:blur(10px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;}
+#blocked-screen.show{display:flex;}
+.blocked-icon{font-size:80px;margin-bottom:16px;}
+.blocked-title{font-family:'Bebas Neue';font-size:48px;letter-spacing:3px;color:var(--red);margin-bottom:12px;}
+.blocked-msg{font-size:16px;color:rgba(255,255,255,0.7);max-width:400px;line-height:1.7;}
+
+/* START/FINISH labels on board */
+.cell.start-cell{background:rgba(46,204,113,0.25);border-color:var(--green);border-width:2px;}
+.cell.finish-cell{background:rgba(255,204,0,0.25);border-color:var(--yellow);border-width:2px;}
+.cell-tag{font-family:'Bebas Neue';font-size:clamp(7px,1vw,11px);letter-spacing:1px;}
 </style>
 </head>
 <body>
+
+<!-- INSTRUCTIONS MODAL -->
+<div id="instructions-overlay">
+  <div class="instr-modal">
+    <div class="instr-logo">
+      <div class="logo-circle">GL</div>
+      <div class="logo-name">GASEOSAS LUX</div>
+    </div>
+    <div class="instr-title">📋 Instrucciones del Juego</div>
+    <div class="instr-body">
+      <h4>🎯 Objetivo</h4>
+      Lleva tu ficha desde la casilla de <strong>INICIO</strong> hasta la <strong>META</strong> (casilla 64) respondiendo correctamente preguntas sobre el Sistema de Gestión de Inocuidad Alimentaria de Gaseosas Lux.
+
+      <h4>⏱️ Tiempo</h4>
+      Tienes <strong>4 minutos</strong> para completar el recorrido. El contador aparece en la parte superior derecha.
+
+      <h4>🎲 ¿Cómo jugar?</h4>
+      <ul>
+        <li>Ingresa tu <strong>nombre completo</strong> y presiona <strong>INICIAR JUEGO</strong>.</li>
+        <li>Lanza el dado haciendo clic en el botón <strong>LANZAR</strong>.</li>
+        <li>Al caer en una casilla con ❓ deberás responder una pregunta de inocuidad.</li>
+        <li>✅ Respuesta correcta: ganas puntos y continúas.</li>
+        <li>❌ Respuesta incorrecta: pierdes una vida. Tienes <strong>3 vidas</strong> (♥♥♥).</li>
+      </ul>
+
+      <h4>🪜 Escaleras y 🐍 Serpientes</h4>
+      <ul>
+        <li><strong>Escaleras (verde):</strong> te impulsan hacia adelante.</li>
+        <li><strong>Serpientes (rojo):</strong> te regresan a una casilla anterior.</li>
+      </ul>
+
+      <h4>🏆 Puntaje</h4>
+      <ul>
+        <li>Cada pregunta correcta suma entre <strong>80 y 160 puntos</strong> según su dificultad.</li>
+        <li>Los <strong>5 mejores puntajes</strong> serán premiados al finalizar la actividad.</li>
+        <li>Solo se permite <strong>un intento por persona</strong>.</li>
+      </ul>
+
+      <div class="instr-warning">⚠️ Por favor ingresa tu NOMBRE COMPLETO para que tu puntaje sea válido.<br>Solo tendrás UN intento en el juego.</div>
+    </div>
+    <button class="instr-btn" onclick="closeInstructions()">✅ ENTENDIDO — CONTINUAR</button>
+  </div>
+</div>
+
+<!-- BLOCKED SCREEN -->
+<div id="blocked-screen">
+  <div class="blocked-icon">🚫</div>
+  <div class="blocked-title">Ya Participaste</div>
+  <div class="blocked-msg">
+    El nombre <strong id="blocked-name"></strong> ya fue registrado en el juego.<br><br>
+    Solo se permite <strong>un intento por persona</strong>.<br>
+    Si crees que es un error, comunícate con el organizador.
+  </div>
+</div>
 
 <!-- LOBBY -->
 <div id="lobby">
@@ -157,7 +238,7 @@ input:focus{border-color:var(--blue);}
   <div class="card">
     <h2>🎮 Ingresa tu nombre para jugar</h2>
     <label>Tu Nombre</label>
-    <input type="text" id="inp-name" placeholder="Ej: Carlos García" maxlength="25">
+    <input type="text" id="inp-name" placeholder="Ej: Carlos Antonio Amortegui" maxlength="40">
     <button class="btn btn-blue" onclick="startSolo()">🚀 INICIAR JUEGO</button>
     <button class="btn btn-board" onclick="showLeaderboard()">🏆 VER TABLA DE PUNTAJES</button>
 
@@ -278,10 +359,17 @@ function buildBoard() {
     cell.id = 'c'+n;
     if (SNAKES[n])  cell.classList.add('snake-head');
     if (LADDERS[n]) cell.classList.add('ladder-start');
-    if (!SNAKES[n] && !LADDERS[n] && n<64) cell.classList.add('challenge');
+    if (!SNAKES[n] && !LADDERS[n] && n<64 && n>1) cell.classList.add('challenge');
     const icon = SNAKES[n]?'🐍':LADDERS[n]?'🪜':'❓';
-    cell.innerHTML = `<span class="cell-num">${n}</span>${icon?`<span class="cell-icon">${icon}</span>`:''}`;
-    board.appendChild(cell);
+    if (n===1) {
+      cell.classList.add('start-cell');
+      cell.innerHTML = `<span style="color:var(--green);font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏁 INICIO</span>`;
+    } else if (n===64) {
+      cell.classList.add('finish-cell');
+      cell.innerHTML = `<span style="color:var(--yellow);font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏆 META</span>`;
+    } else {
+      cell.innerHTML = `<span class="cell-num">${n}</span>${icon?`<span class="cell-icon">${icon}</span>`:''}`;
+    }
     cells[n] = cell;
   });
   // Token
@@ -307,7 +395,7 @@ function placeToken(p) {
 
 // ── TIMER ──
 function startTimer() {
-  secondsLeft = 300;
+  secondsLeft = 240;
   updateTimerDisplay();
   timerInterval = setInterval(() => {
     secondsLeft--;
@@ -340,10 +428,16 @@ function updateScore(s) {
   document.getElementById('score-display').textContent = s;
 }
 
+// ── INSTRUCTIONS ──
+function closeInstructions() {
+  document.getElementById('instructions-overlay').style.display = 'none';
+}
+
 // ── LOBBY ──
 function startSolo() {
   myName = document.getElementById('inp-name').value.trim();
-  if (!myName) { showToast('Ingresa tu nombre primero','info'); return; }
+  if (!myName) { showToast('Ingresa tu nombre completo','info'); return; }
+  if (myName.split(' ').length < 2) { showToast('Por favor ingresa tu nombre COMPLETO','info'); return; }
   socket.emit('startSolo', { playerName: myName });
 }
 
@@ -442,6 +536,11 @@ function showEnd(icon, title, scoreVal, msg, leaderboard) {
 // ── SOCKET EVENTS ──
 socket.on('leaderboard', (scores) => {
   renderLbPreview(scores);
+});
+
+socket.on('blocked', ({name}) => {
+  document.getElementById('blocked-name').textContent = name;
+  document.getElementById('blocked-screen').classList.add('show');
 });
 
 socket.on('soloStarted', ({name}) => {
