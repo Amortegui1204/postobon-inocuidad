@@ -113,11 +113,12 @@ function shuffle(arr) {
   return a;
 }
 
-function applySnakeLadder(pos) {
+function applySnakeLadder(pos, score) {
   let event = null;
-  if (SNAKES[pos])  { event={type:'snake', from:pos,to:SNAKES[pos]};  pos=SNAKES[pos]; }
-  if (LADDERS[pos]) { event={type:'ladder',from:pos,to:LADDERS[pos]}; pos=LADDERS[pos]; }
-  return {pos, event};
+  let scoreChange = 0;
+  if (SNAKES[pos])  { event={type:'snake', from:pos,to:SNAKES[pos]};  pos=SNAKES[pos]; scoreChange=-100; }
+  if (LADDERS[pos]) { event={type:'ladder',from:pos,to:LADDERS[pos]}; pos=LADDERS[pos]; scoreChange=+50; }
+  return {pos, event, scoreChange};
 }
 
 app.get('/leaderboard', (req,res) => res.json(loadScores()));
@@ -153,10 +154,14 @@ io.on('connection', (socket) => {
     if (socket.waitingAnswer) return;
     const roll = Math.floor(Math.random()*6)+1;
     let newPos = socket.pos + roll;
-    if (newPos > 64) newPos = socket.pos;
-    const {pos:finalPos, event} = applySnakeLadder(newPos);
+    if (newPos >= 64) newPos = 64; // any roll that reaches or passes 64 wins
+    const {pos:finalPos, event, scoreChange} = applySnakeLadder(newPos, socket.score);
     socket.pos = finalPos;
-    socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives});
+    // Apply snake/ladder score bonus
+    if (scoreChange !== 0) {
+      socket.score = Math.max(0, socket.score + scoreChange);
+    }
+    socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives, scoreChange});
     if (finalPos >= 64) {
       const scores = saveScore(socket.playerName, socket.score);
       socket.emit('gameWon', {score:socket.score, leaderboard:scores});
