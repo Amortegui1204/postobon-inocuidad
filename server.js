@@ -126,7 +126,14 @@ io.on('connection', (socket) => {
   socket.emit('leaderboard', loadScores());
 
   socket.on('startSolo', ({playerName}) => {
-    socket.playerName = playerName || 'Jugador';
+    const name = (playerName || 'Jugador').trim();
+    // Check if player already played
+    const played = loadScores().find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (played) {
+      socket.emit('blocked', { name });
+      return;
+    }
+    socket.playerName = name;
     socket.pos = 0;
     socket.score = 0;
     socket.lives = 3;
