@@ -113,6 +113,17 @@ function shuffle(arr) {
   return a;
 }
 
+function shuffleAnswers(q) {
+  // Create indexed options, shuffle them, update answer index
+  const indexed = q.opts.map((text, i) => ({text, correct: i === q.ans}));
+  const shuffled = shuffle(indexed);
+  return {
+    ...q,
+    opts: shuffled.map(o => o.text),
+    ans: shuffled.findIndex(o => o.correct)
+  };
+}
+
 function applySnakeLadder(pos, score) {
   let event = null;
   let scoreChange = 0;
@@ -128,8 +139,19 @@ io.on('connection', (socket) => {
 
   socket.on('startSolo', ({playerName}) => {
     const name = (playerName || 'Jugador').trim();
-    // Check if player already played
-    const played = loadScores().find(s => s.name.toLowerCase() === name.toLowerCase());
+    // Check if player already played - detect partial name matches
+    const played = loadScores().find(s => {
+      const existing = s.name.toLowerCase();
+      const incoming = name.toLowerCase();
+      // Exact match
+      if (existing === incoming) return true;
+      // Check if any word from incoming name matches any word from existing name
+      const existingWords = existing.split(' ').filter(w => w.length > 2);
+      const incomingWords = incoming.split(' ').filter(w => w.length > 2);
+      // If 2 or more words match, consider it the same person
+      const matches = incomingWords.filter(w => existingWords.includes(w));
+      return matches.length >= 2;
+    });
     if (played) {
       socket.emit('blocked', { name });
       return;
@@ -145,7 +167,7 @@ io.on('connection', (socket) => {
     const shuffledS = shuffle(ALL_SQUARES);
     socket.squareMap = {};
     shuffledS.forEach((sq,i) => {
-      socket.squareMap[sq] = shuffledQ[i % shuffledQ.length];
+      socket.squareMap[sq] = shuffleAnswers(shuffledQ[i % shuffledQ.length]);
     });
     socket.emit('soloStarted', {name: socket.playerName});
   });
