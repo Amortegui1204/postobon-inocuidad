@@ -332,9 +332,8 @@ let cells = [], token = null;
 let myName = '';
 let gameActive = false;
 
-const SNAKES  = {60:44,41:25,28:10,54:36,47:19,35:6};
-const LADDERS = {4:14,9:31,20:38,40:59,51:67,63:81,15:44,33:56};
-const QSQUARES = new Set([3,4,5,8,11,12,13,19,21,23,29,30,32,37,39,44,46,49,52,53,58]);
+const SNAKES  = {60:44,54:36,47:19,41:25,35:6,28:10};
+const LADDERS = {4:14,9:31,20:38,33:56,40:59,51:67,63:81};
 
 // ── DICE SVG ──
 function diceSVG(n) {
@@ -361,18 +360,22 @@ function buildBoard() {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.id = 'c'+n;
-    if (SNAKES[n])  cell.classList.add('snake-head');
-    if (LADDERS[n]) cell.classList.add('ladder-start');
-    const snakeTails = Object.values(SNAKES);
-    const ladderEnds = Object.values(LADDERS);
+
+    const SNAKE_TAILS = new Set(Object.values(SNAKES));
+    const LADDER_TOPS = new Set(Object.values(LADDERS));
     const isSnakeHead  = !!SNAKES[n];
     const isLadderFoot = !!LADDERS[n];
-    const isSnakeTail  = snakeTails.includes(n) && !isSnakeHead;
-    const isLadderTop  = ladderEnds.includes(n) && !isLadderFoot;
-    if (isSnakeTail) cell.classList.add('snake-tail');
-    if (isLadderTop) cell.classList.add('ladder-end');
-    if (!isSnakeHead && !isLadderFoot && !isSnakeTail && !isLadderTop && n<64 && n>1) cell.classList.add('challenge');
+    const isSnakeTail  = SNAKE_TAILS.has(n) && !isSnakeHead && !isLadderFoot;
+    const isLadderTop  = LADDER_TOPS.has(n) && !isSnakeHead && !isLadderFoot && !isSnakeTail;
+
+    if (isSnakeHead)  cell.classList.add('snake-head');
+    else if (isLadderFoot) cell.classList.add('ladder-start');
+    else if (isSnakeTail)  cell.classList.add('snake-tail');
+    else if (isLadderTop)  cell.classList.add('ladder-end');
+    else if (n>1 && n<64)  cell.classList.add('challenge');
+
     const icon = isSnakeHead ? '🐍' : isLadderFoot ? '🪜' : isSnakeTail ? '🔻❓' : isLadderTop ? '🔝❓' : '❓';
+
     if (n===1) {
       cell.classList.add('start-cell');
       cell.innerHTML = `<span style="color:#E91E8C;font-family:'Bebas Neue';font-size:clamp(6px,0.9vw,11px);letter-spacing:1px;">🏁 INICIO</span>`;
