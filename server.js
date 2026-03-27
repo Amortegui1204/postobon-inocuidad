@@ -123,7 +123,7 @@ const QUESTIONS = [
 ];
 
 const SNAKES  = {60:44,54:36,47:19,41:25,35:6,28:10};
-const LADDERS = {4:14,9:31,20:38,33:56,40:59,51:67,63:81};
+const LADDERS = {4:14,9:31,20:38,33:56,40:59,51:62};
 const SNAKE_SET  = new Set(Object.keys(SNAKES).map(Number));
 const LADDER_SET = new Set(Object.keys(LADDERS).map(Number));
 const ALL_SQUARES = Array.from({length:64},(_,i)=>i+1)
