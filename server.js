@@ -37,7 +37,7 @@ async function loadScores() {
       method: 'GET',
       headers: { 'X-Master-Key': API_KEY, 'X-Bin-Meta': 'false' }
     });
-    return Array.isArray(result) ? result : (result.scores || []);
+    return Array.isArray(result) ? result : (result.puntajes || []);
   } catch { return []; }
 }
 
