@@ -9,10 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── JSONBIN SCORE PERSISTENCE ─────────────────────────────────────────────
-// Free cloud storage - scores persist even when Render restarts
-const JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
-const BIN_ID = process.env.JSONBIN_BIN_ID || '';
+const BIN_ID  = process.env.JSONBIN_BIN_ID  || '';
 const API_KEY = process.env.JSONBIN_API_KEY || '';
 
 function httpsRequest(options, body) {
@@ -37,13 +34,22 @@ async function loadScores() {
       method: 'GET',
       headers: { 'X-Master-Key': API_KEY, 'X-Bin-Meta': 'false' }
     });
-    return Array.isArray(result) ? result : (result.puntajes || []);
-  } catch { return []; }
+    let arr = [];
+    if (Array.isArray(result)) arr = result;
+    else if (result && Array.isArray(result.scores)) arr = result.scores;
+    else if (result && Array.isArray(result.puntajes)) arr = result.puntajes;
+    // Filter out any invalid entries
+    return arr.filter(s => s && typeof s.name === 'string' && s.name.trim() !== '' && typeof s.score === 'number');
+  } catch(e) {
+    console.error('loadScores error:', e.message);
+    return [];
+  }
 }
 
 async function saveScore(name, score) {
+  if (!name || !name.trim() || typeof score !== 'number') return await loadScores();
   let scores = await loadScores();
-  scores.push({ name, score, date: new Date().toLocaleDateString('es-CO') });
+  scores.push({ name: name.trim(), score, date: new Date().toLocaleDateString('es-CO') });
   scores.sort((a, b) => b.score - a.score);
   scores = scores.slice(0, 50);
   if (BIN_ID && API_KEY) {
@@ -52,18 +58,14 @@ async function saveScore(name, score) {
         hostname: 'api.jsonbin.io',
         path: `/v3/b/${BIN_ID}`,
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': API_KEY,
-          'X-Bin-Meta': 'false'
-        }
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY, 'X-Bin-Meta': 'false' }
       }, scores);
-    } catch (e) { console.error('Error saving score:', e.message); }
+      console.log(`✅ Score saved: ${name} - ${score}`);
+    } catch(e) { console.error('saveScore error:', e.message); }
   }
   return scores;
 }
 
-// ── QUESTIONS ────────────────────────────────────────────────────────────────
 const QUESTIONS = [
   { q:"¿Cada cuánto tiempo deben lavarse las manos los operarios durante la producción?", opts:["Cada hora","Antes y después de cada actividad crítica","Solo al inicio del turno","Una vez al día"], ans:1, pts:100, tema:"Higiene Personal" },
   { q:"¿Qué elemento NO debe usarse dentro de la planta de producción?", opts:["Cofia","Guantes","Reloj y joyas","Tapabocas"], ans:2, pts:80, tema:"Higiene Personal" },
@@ -112,7 +114,7 @@ const QUESTIONS = [
   { q:"¿Qué es un registro en inocuidad?", opts:["Un informe anual","Una evidencia documentada de actividades de control","Un listado de empleados","Un contrato de calidad"], ans:1, pts:90, tema:"BPM" },
   { q:"¿Cuál es la vestimenta mínima para ingresar a producción?", opts:["Solo guantes","Cofia, tapabocas, uniforme limpio y calzado adecuado","Solo uniforme","Cualquier ropa de trabajo"], ans:1, pts:100, tema:"BPM" },
   { q:"¿Qué debe hacerse con un producto que cae al suelo?", opts:["Recogerlo y continuar","Lavarlo y usarlo","Descartarlo e iniciar protocolo de producto no conforme","Guardarlo aparte"], ans:2, pts:120, tema:"BPM" },
-  { q:"¿Qué significa 'inocuidad alimentaria'?", opts:["Que el alimento es sabroso","Que el alimento no causa daño a la salud","Que el alimento es nutritivo","Que el alimento es económico"], ans:1, pts:100, tema:"BPM" },
+  { q:"¿Qué significa inocuidad alimentaria?", opts:["Que el alimento es sabroso","Que el alimento no causa daño a la salud","Que el alimento es nutritivo","Que el alimento es económico"], ans:1, pts:100, tema:"BPM" },
   { q:"¿Qué acción tomar al encontrar una plaga dentro de la planta?", opts:["Ignorarla si es pequeña","Reportarla inmediatamente al área de saneamiento","Eliminarla con cualquier producto","Esperar al siguiente turno"], ans:1, pts:130, tema:"BPM" },
   { q:"¿Con qué frecuencia se debe calibrar un termómetro de control?", opts:["Nunca","Solo cuando falla","Según el programa de calibración establecido","Una vez al año"], ans:2, pts:120, tema:"HACCP" },
   { q:"¿Cuál es el alcance de FSSC 22000 en Gaseosas Lux Bogotá?", opts:["Solo bebidas gaseosas en vidrio","Fabricación de gaseosas, jugos, agua y bebidas hidratantes en diversas líneas","Solo producción de agua","Solo jugos y néctares"], ans:1, pts:130, tema:"FSSC 22000" },
@@ -148,85 +150,92 @@ function applySnakeLadder(pos) {
   return {pos, event, scoreChange};
 }
 
-function nextAliveTurn(room, current) {
-  let next = (current+1) % room.players.length, tries = 0;
-  while (room.players[next].lives<=0 && tries<room.players.length) { next=(next+1)%room.players.length; tries++; }
-  return next;
-}
-
 app.get('/leaderboard', async (req,res) => res.json(await loadScores()));
 
 io.on('connection', async (socket) => {
-  socket.emit('leaderboard', await loadScores());
+  try { socket.emit('leaderboard', await loadScores()); } catch(e) { socket.emit('leaderboard', []); }
 
   socket.on('startSolo', async ({playerName}) => {
-    const name = (playerName || 'Jugador').trim();
-    const scores = await loadScores();
-    const played = scores.find(s => {
-      const existing = s.name.toLowerCase();
-      const incoming = name.toLowerCase();
-      if (existing === incoming) return true;
-      const existingWords = existing.split(' ').filter(w => w.length > 2);
-      const incomingWords = incoming.split(' ').filter(w => w.length > 2);
-      const matches = incomingWords.filter(w => existingWords.includes(w));
-      return matches.length >= 2;
-    });
-    if (played) { socket.emit('blocked', { name }); return; }
+    try {
+      const name = (playerName || '').trim();
+      if (!name) { socket.emit('blocked', { name: '' }); return; }
 
-    socket.playerName = name;
-    socket.pos = 0;
-    socket.score = 0;
-    socket.lives = 3;
-    socket.waitingAnswer = false;
-    socket.currentQuestion = null;
-    const shuffledQ = shuffle(QUESTIONS);
-    const shuffledS = shuffle(ALL_SQUARES);
-    socket.squareMap = {};
-    shuffledS.forEach((sq,i) => { socket.squareMap[sq] = shuffleAnswers(shuffledQ[i % shuffledQ.length]); });
-    socket.emit('soloStarted', {name: socket.playerName});
+      const scores = await loadScores();
+      const played = scores.find(s => {
+        if (!s || typeof s.name !== 'string') return false;
+        const existing = s.name.toLowerCase();
+        const incoming = name.toLowerCase();
+        if (existing === incoming) return true;
+        const existingWords = existing.split(' ').filter(w => w.length > 2);
+        const incomingWords = incoming.split(' ').filter(w => w.length > 2);
+        const matches = incomingWords.filter(w => existingWords.includes(w));
+        return matches.length >= 2;
+      });
+      if (played) { socket.emit('blocked', { name }); return; }
+
+      socket.playerName = name;
+      socket.pos = 0;
+      socket.score = 0;
+      socket.lives = 3;
+      socket.waitingAnswer = false;
+      socket.currentQuestion = null;
+      const shuffledQ = shuffle(QUESTIONS);
+      const shuffledS = shuffle(ALL_SQUARES);
+      socket.squareMap = {};
+      shuffledS.forEach((sq,i) => { socket.squareMap[sq] = shuffleAnswers(shuffledQ[i % shuffledQ.length]); });
+      socket.emit('soloStarted', {name: socket.playerName});
+    } catch(e) {
+      console.error('startSolo error:', e.message);
+    }
   });
 
   socket.on('rollDice', () => {
-    if (socket.waitingAnswer) return;
-    const roll = Math.floor(Math.random()*6)+1;
-    let newPos = socket.pos + roll;
-    if (newPos >= 64) newPos = 64;
-    const {pos:finalPos, event, scoreChange} = applySnakeLadder(newPos);
-    socket.pos = finalPos;
-    if (scoreChange !== 0) socket.score = Math.max(0, socket.score + scoreChange);
-    socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives, scoreChange});
-    if (finalPos >= 64) {
-      saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
-      return;
-    }
-    const q = socket.squareMap && socket.squareMap[finalPos];
-    if (q && !SNAKE_SET.has(finalPos) && !LADDER_SET.has(finalPos)) {
-      socket.waitingAnswer = true;
-      socket.currentQuestion = {...q, id:Date.now()};
-      socket.emit('questionAsked', {question:socket.currentQuestion});
-    }
+    try {
+      if (socket.waitingAnswer) return;
+      const roll = Math.floor(Math.random()*6)+1;
+      let newPos = (socket.pos || 0) + roll;
+      if (newPos >= 64) newPos = 64;
+      const {pos:finalPos, event, scoreChange} = applySnakeLadder(newPos);
+      socket.pos = finalPos;
+      if (scoreChange !== 0) socket.score = Math.max(0, (socket.score||0) + scoreChange);
+      socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives, scoreChange});
+      if (finalPos >= 64) {
+        saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
+        return;
+      }
+      const q = socket.squareMap && socket.squareMap[finalPos];
+      if (q && !SNAKE_SET.has(finalPos) && !LADDER_SET.has(finalPos)) {
+        socket.waitingAnswer = true;
+        socket.currentQuestion = {...q, id:Date.now()};
+        socket.emit('questionAsked', {question:socket.currentQuestion});
+      }
+    } catch(e) { console.error('rollDice error:', e.message); }
   });
 
   socket.on('answerQuestion', ({answerId}) => {
-    if (!socket.waitingAnswer || !socket.currentQuestion) return;
-    const q = socket.currentQuestion;
-    const correct = answerId === q.ans;
-    socket.waitingAnswer = false;
-    socket.currentQuestion = null;
-    if (correct) {
-      socket.score += q.pts;
-      socket.emit('answerResult', {correct:true, pts:q.pts, score:socket.score, lives:socket.lives, message:`✅ ¡Correcto! +${q.pts} puntos`});
-    } else {
-      socket.lives -= 1;
-      socket.emit('answerResult', {correct:false, pts:0, score:socket.score, lives:socket.lives, message:`❌ Incorrecto. Era: "${q.opts[q.ans]}"`});
-      if (socket.lives <= 0) {
-        saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores}));
+    try {
+      if (!socket.waitingAnswer || !socket.currentQuestion) return;
+      const q = socket.currentQuestion;
+      const correct = answerId === q.ans;
+      socket.waitingAnswer = false;
+      socket.currentQuestion = null;
+      if (correct) {
+        socket.score += q.pts;
+        socket.emit('answerResult', {correct:true, pts:q.pts, score:socket.score, lives:socket.lives, message:`✅ ¡Correcto! +${q.pts} puntos`});
+      } else {
+        socket.lives -= 1;
+        socket.emit('answerResult', {correct:false, pts:0, score:socket.score, lives:socket.lives, message:`❌ Incorrecto. Era: "${q.opts[q.ans]}"`});
+        if (socket.lives <= 0) {
+          saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores}));
+        }
       }
-    }
+    } catch(e) { console.error('answerQuestion error:', e.message); }
   });
 
   socket.on('timeUp', () => {
-    saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores, reason:'tiempo'}));
+    try {
+      saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores, reason:'tiempo'}));
+    } catch(e) { console.error('timeUp error:', e.message); }
   });
 });
 
