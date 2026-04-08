@@ -230,17 +230,26 @@ io.on('connection', async (socket) => {
   socket.on('rollDice', () => {
     try {
       if (socket.waitingAnswer) return;
+      if (socket.scoreSaved) return; // Game already ended
+      if (!socket.playerName) return; // Not started yet
+
       const roll = Math.floor(Math.random()*6)+1;
       let newPos = (socket.pos || 0) + roll;
-      if (newPos >= 64) newPos = 64;
+
+      // If reaches or passes 64, go directly to 64 - WIN
+      if (newPos >= 64) {
+        socket.pos = 64;
+        socket.emit('diceRolled', {roll, newPos:64, event:null, score:socket.score, lives:socket.lives, scoreChange:0});
+        saveScoreOnce(socket, 'ganó').then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
+        return;
+      }
+
+      // Apply snakes/ladders only if not winning
       const {pos:finalPos, event, scoreChange} = applySnakeLadder(newPos);
       socket.pos = finalPos;
       if (scoreChange !== 0) socket.score = Math.max(0, (socket.score||0) + scoreChange);
       socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives, scoreChange});
-      if (finalPos >= 64) {
-        saveScoreOnce(socket, 'ganó').then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
-        return;
-      }
+
       const q = socket.squareMap && socket.squareMap[finalPos];
       if (q && !SNAKE_SET.has(finalPos) && !LADDER_SET.has(finalPos)) {
         socket.waitingAnswer = true;
