@@ -150,7 +150,48 @@ function applySnakeLadder(pos) {
   return {pos, event, scoreChange};
 }
 
+async function saveScoreOnce(socket, reason) {
+  if (socket.scoreSaved) return await loadScores();
+  socket.scoreSaved = true;
+  console.log(`✅ Score saved: ${socket.playerName} - ${socket.score} (${reason})`);
+  return await saveScore(socket.playerName, socket.score);
+}
+
 app.get('/leaderboard', async (req,res) => res.json(await loadScores()));
+
+// In-memory registry of names that have played (persists while server is running)
+const playedNames = new Set();
+
+function normalizeNameForComparison(name) {
+  return name.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/\s+/g, ' '); // normalize spaces
+}
+
+function nameAlreadyPlayed(name, scores) {
+  const incoming = normalizeNameForComparison(name);
+  const incomingWords = incoming.split(' ').filter(w => w.length > 2);
+
+  // Check in-memory registry first
+  for (const played of playedNames) {
+    const existing = normalizeNameForComparison(played);
+    if (existing === incoming) return true;
+    const existingWords = existing.split(' ').filter(w => w.length > 2);
+    const matches = incomingWords.filter(w => existingWords.includes(w));
+    if (matches.length >= 2) return true;
+  }
+
+  // Also check against saved scores
+  for (const s of scores) {
+    if (!s || typeof s.name !== 'string') continue;
+    const existing = normalizeNameForComparison(s.name);
+    if (existing === incoming) return true;
+    const existingWords = existing.split(' ').filter(w => w.length > 2);
+    const matches = incomingWords.filter(w => existingWords.includes(w));
+    if (matches.length >= 2) return true;
+  }
+  return false;
+}
 
 io.on('connection', async (socket) => {
   try { socket.emit('leaderboard', await loadScores()); } catch(e) { socket.emit('leaderboard', []); }
@@ -161,24 +202,21 @@ io.on('connection', async (socket) => {
       if (!name) { socket.emit('blocked', { name: '' }); return; }
 
       const scores = await loadScores();
-      const played = scores.find(s => {
-        if (!s || typeof s.name !== 'string') return false;
-        const existing = s.name.toLowerCase();
-        const incoming = name.toLowerCase();
-        if (existing === incoming) return true;
-        const existingWords = existing.split(' ').filter(w => w.length > 2);
-        const incomingWords = incoming.split(' ').filter(w => w.length > 2);
-        const matches = incomingWords.filter(w => existingWords.includes(w));
-        return matches.length >= 2;
-      });
-      if (played) { socket.emit('blocked', { name }); return; }
+      if (nameAlreadyPlayed(name, scores)) {
+        socket.emit('blocked', { name });
+        return;
+      }
 
+      // Register name immediately to prevent double entry
+      playedNames.add(name);
       socket.playerName = name;
       socket.pos = 0;
       socket.score = 0;
       socket.lives = 3;
       socket.waitingAnswer = false;
       socket.currentQuestion = null;
+      socket.scoreSaved = false; // prevent saving score multiple times
+      socket.scoreSaved = false; // Flag to prevent saving multiple times
       const shuffledQ = shuffle(QUESTIONS);
       const shuffledS = shuffle(ALL_SQUARES);
       socket.squareMap = {};
@@ -200,7 +238,7 @@ io.on('connection', async (socket) => {
       if (scoreChange !== 0) socket.score = Math.max(0, (socket.score||0) + scoreChange);
       socket.emit('diceRolled', {roll, newPos:finalPos, event, score:socket.score, lives:socket.lives, scoreChange});
       if (finalPos >= 64) {
-        saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
+        saveScoreOnce(socket, 'ganó').then(scores => socket.emit('gameWon', {score:socket.score, leaderboard:scores}));
         return;
       }
       const q = socket.squareMap && socket.squareMap[finalPos];
@@ -226,7 +264,7 @@ io.on('connection', async (socket) => {
         socket.lives -= 1;
         socket.emit('answerResult', {correct:false, pts:0, score:socket.score, lives:socket.lives, message:`❌ Incorrecto. Era: "${q.opts[q.ans]}"`});
         if (socket.lives <= 0) {
-          saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores}));
+          saveScoreOnce(socket, 'sin vidas').then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores}));
         }
       }
     } catch(e) { console.error('answerQuestion error:', e.message); }
@@ -234,7 +272,7 @@ io.on('connection', async (socket) => {
 
   socket.on('timeUp', () => {
     try {
-      saveScore(socket.playerName, socket.score).then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores, reason:'tiempo'}));
+      saveScoreOnce(socket, 'tiempo').then(scores => socket.emit('gameOver', {score:socket.score, leaderboard:scores, reason:'tiempo'}));
     } catch(e) { console.error('timeUp error:', e.message); }
   });
 });
