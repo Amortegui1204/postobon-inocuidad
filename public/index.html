@@ -452,6 +452,9 @@ function startSolo() {
   myName = document.getElementById('inp-name').value.trim();
   if (!myName) { showToast('Ingresa tu nombre completo','info'); return; }
   if (myName.split(' ').length < 2) { showToast('Por favor ingresa tu nombre COMPLETO','info'); return; }
+  // Disable button immediately to prevent multiple clicks
+  const btn = document.querySelector('.btn-blue');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ CARGANDO...'; }
   socket.emit('startSolo', { playerName: myName });
 }
 
@@ -611,11 +614,15 @@ socket.on('answerResult', ({correct, pts, score: s, lives: l, message}) => {
 
 socket.on('gameWon', ({score: s, leaderboard}) => {
   clearInterval(timerInterval);
-  showEnd('🏆','¡LLEGASTE!', s, '¡Felicidades! Completaste el tablero.', leaderboard);
+  document.getElementById('roll-btn').disabled = true;
+  setTimeout(() => {
+    showEnd('🏆','¡LLEGASTE A LA META!', s, '¡Felicidades! Completaste el tablero.', leaderboard);
+  }, 800); // small delay so player sees the token on META
 });
 
 socket.on('gameOver', ({score: s, leaderboard, reason}) => {
   clearInterval(timerInterval);
+  document.getElementById('roll-btn').disabled = true;
   if (reason==='tiempo') {
     showEnd('⏰','¡TIEMPO!', s, 'Se acabó el tiempo. ¡Buen intento!', leaderboard);
   } else {
